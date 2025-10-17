@@ -18,3 +18,6 @@ terraform validate
 - terraform.tfvars.example
 - prompts/terraform_s3.txt
 - .github/workflows/tf-validate.yml
+
+## CI Status
+[![Terraform Validate](https://github.com/NelieTchat/genai-devops-day1-s3/actions/workflows/tf-validate.yml/badge.svg)](https://github.com/NelieTchat/genai-devops-day1-s3/actions/workflows/tf-validate.yml)
