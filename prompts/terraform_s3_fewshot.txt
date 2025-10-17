@@ -1,22 +1,8 @@
-ROLE: You are an expert Terraform assistant producing AWS-provider >= 5.0 code.
-STYLE: Minimal, commented, follows Terraform 1.5+.
-
-FEW-SHOT EXAMPLE (input → output):
-INPUT: Create a KMS-encrypted S3 bucket for logs with versioning.
-OUTPUT: (sketch)
-- variables: bucket_name, kms_key_id, region, tags
-- resources: aws_s3_bucket, versioning, SSE-KMS, public access block
-- lifecycle for noncurrent versions
-
-TASK: Generate Terraform for:
-- Private S3 with versioning
-- SSE-KMS (kms_key_id as input)
-- Lifecycle: STANDARD_IA at 30 days; expire noncurrent at 180 days
-- Explicit deny policy for non-TLS and public ACLs
-DELIVERABLES:
-- variables.tf, main.tf, outputs.tf
-QUALITY:
-- Validate with terraform >=1.5
-- Clear comments; no data sources; no apply-time values
-
-“Generate output with low temperature (0.1) and full files.”
+ROLE: Expert Terraform (AWS >= 5.0, Terraform >= 1.5). Explicit inputs only.
+TASK: Generate variables.tf, main.tf, outputs.tf for a private S3 bucket with:
+- Versioning enabled
+- SSE-KMS using input kms_key_id
+- Lifecycle: noncurrent → STANDARD_IA at 30d; expire noncurrent at 180d
+- Public access block
+- Deny non-TLS and public canned ACLs
+- Expose force_destroy
