@@ -28,3 +28,5 @@ terraform validate
 [![checkov](https://github.com/NelieTchat/genai-devops-day1-s3/actions/workflows/checkov.yml/badge.svg)](https://github.com/NelieTchat/genai-devops-day1-s3/actions/workflows/checkov.yml)
 
 [![GenAI Codegen](https://github.com/NelieTchat/genai-devops-day1-s3/actions/workflows/genai-codegen.yml/badge.svg)](https://github.com/NelieTchat/genai-devops-day1-s3/actions/workflows/genai-codegen.yml)
+
+[![GenAI Codegen](https://github.com/NelieTchat/genai-devops-day1-s3/actions/workflows/genai-codegen.yml/badge.svg)](https://github.com/NelieTchat/genai-devops-day1-s3/actions/workflows/genai-codegen.yml)
