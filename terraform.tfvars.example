@@ -1,8 +1,7 @@
 # Copy this file to terraform.tfvars and fill values.
 
-bucket_name = "<your-unique-bucket-name>"        # e.g., nelie-genai-devops-logs-001
-kms_key_id  = "<your-kms-key-arn>"               # e.g., arn:aws:kms:us-east-1:111122223333:key/uuid
-region      = "us-east-1"
+bucket_name = "nelie-genai-devops-logs-001"       
+kms_key_id  = "<your-kms-key-arn>"               
 
 tags = {
   Project = "GenAI-DevOps"
