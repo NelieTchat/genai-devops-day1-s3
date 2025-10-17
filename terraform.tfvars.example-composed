@@ -1,0 +1,14 @@
+# This works only with the composed-naming module variant (not active right now).
+bucket_name = ""
+
+prefix      = "nelie"
+env         = "dev"
+randomize   = true
+
+kms_key_id  = "<your-kms-key-arn>"   # e.g., arn:aws:kms:us-east-1:111122223333:key/uuid
+region      = "us-east-1"
+
+tags = {
+  Project = "GenAI-DevOps"
+  Owner   = "Nelie"
+}
