@@ -46,3 +46,4 @@ variable "log_prefix" {
   description = "Prefix for access logs in the target bucket."
   default     = "s3-logs/"
 }
+
