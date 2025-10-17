@@ -1,0 +1,19 @@
+name: tflint
+on:
+  push:
+    paths: ["**.tf"]
+  pull_request:
+    paths: ["**.tf"]
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tflint
+        run: |
+          curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+          sudo mv tflint /usr/local/bin/
+      - name: Init tflint
+        run: tflint --init
+      - name: Run tflint
+        run: tflint -f compact
