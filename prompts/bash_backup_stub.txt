@@ -1,0 +1,6 @@
+ROLE: Senior Bash engineer.
+CONSTRAINTS:
+- POSIX-friendly where possible; fail fast (set -euo pipefail).
+- Comment each step; echo progress; parameterize paths via vars.
+DELIVERABLE: A Bash script that creates a timestamped S3 backup (mocked: no aws calls), writes logs locally, and exits non-zero on error.
+NOTE: No real cloud commands. Use placeholders and show where aws CLI would go.

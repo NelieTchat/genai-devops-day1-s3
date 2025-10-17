@@ -1,13 +1,11 @@
+// -------- main.tf --------
+// Terraform & provider constraints.
 terraform {
   required_version = ">= 1.5.0"
   required_providers {
     aws = {
       source  = "hashicorp/aws"
       version = ">= 5.0"
-    }
-    random = {
-      source  = "hashicorp/random"
-      version = ">= 3.6"
     }
   }
 }
@@ -16,58 +14,59 @@ provider "aws" {
   region = var.region
 }
 
-# Optional random suffix (4 hex chars) for global uniqueness
-resource "random_id" "suffix" {
-  count       = var.randomize ? 1 : 0
-  byte_length = 2
+// S3 bucket: private by default; public access further blocked below.
+resource "aws_s3_bucket" "this" {
+  bucket        = var.bucket_name
+  force_destroy = var.force_destroy
+
+  tags = merge(
+    var.tags,
+    {
+      "Name" = var.bucket_name
+    }
+  )
 }
 
-locals {
-  # base like: nelie-dev-logs
-  bucket_base = lower(replace("${var.prefix}-${var.env}-logs", "_", "-"))
-  # final like: nelie-dev-logs-ab12 (if randomize) or just nelie-dev-logs
-  bucket_comp = var.randomize ? "${local.bucket_base}-${random_id.suffix[0].hex}" : local.bucket_base
-
-  # if user passes bucket_name, use it; otherwise, use composed name
-  bucket_final = var.bucket_name != "" ? var.bucket_name : local.bucket_comp
-}
-
-# S3 bucket (private, versioned, KMS-encrypted)
-resource "aws_s3_bucket" "logs" {
-  bucket = local.bucket_final
-  tags   = merge(var.tags, { Name = local.bucket_final })
-}
-
-resource "aws_s3_bucket_public_access_block" "logs" {
-  bucket                  = aws_s3_bucket.logs.id
+// Block all public access at the account/bucket level.
+resource "aws_s3_bucket_public_access_block" "this" {
+  bucket                  = aws_s3_bucket.this.id
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
   restrict_public_buckets = true
 }
 
-resource "aws_s3_bucket_versioning" "logs" {
-  bucket = aws_s3_bucket.logs.id
-  versioning_configuration { status = "Enabled" }
+// Versioning: required for noncurrent lifecycle rules.
+resource "aws_s3_bucket_versioning" "this" {
+  bucket = aws_s3_bucket.this.id
+  versioning_configuration {
+    status = "Enabled"
+  }
 }
 
-resource "aws_s3_bucket_server_side_encryption_configuration" "logs" {
-  bucket = aws_s3_bucket.logs.id
+// Default encryption: SSE-KMS using provided key.
+resource "aws_s3_bucket_server_side_encryption_configuration" "this" {
+  bucket = aws_s3_bucket.this.id
+
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm     = "aws:kms"
       kms_master_key_id = var.kms_key_id
     }
-    bucket_key_enabled = true
+    bucket_key_enabled = true // S3 Bucket Keys reduce KMS request costs.
   }
 }
 
-resource "aws_s3_bucket_lifecycle_configuration" "logs" {
-  bucket = aws_s3_bucket.logs.id
+// Lifecycle: transition current objects to STANDARD_IA at 30 days,
+// and expire noncurrent versions at 180 days.
+resource "aws_s3_bucket_lifecycle_configuration" "this" {
+  bucket = aws_s3_bucket.this.id
+  depends_on = [aws_s3_bucket_versioning.this]
 
   rule {
-    id     = "noncurrent-transition-and-expire"
+    id     = "noncurrent-ia-30d-expire-180d"
     status = "Enabled"
+    filter {}
 
     noncurrent_version_transition {
       noncurrent_days = 30
@@ -80,36 +79,73 @@ resource "aws_s3_bucket_lifecycle_configuration" "logs" {
   }
 }
 
-# Extra guardrails via bucket policy (deny non-TLS + public ACLs)
-resource "aws_s3_bucket_policy" "logs" {
-  bucket = aws_s3_bucket.logs.id
+resource "aws_s3_bucket_ownership_controls" "this" {
+  bucket = aws_s3_bucket.this.id
+  rule { object_ownership = "BucketOwnerEnforced" }
+}
+
+// Explicit deny policy:
+// - Deny any request over non-TLS (aws:SecureTransport = false)
+// - Deny attempts to set public canned ACLs on objects/bucket
+resource "aws_s3_bucket_policy" "this" {
+  bucket = aws_s3_bucket.this.id
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
+      // Deny non-TLS for any S3 action on this bucket and its objects.
       {
-        Sid: "DenyInsecureTransport",
-        Effect: "Deny",
-        Principal: "*",
-        Action: "s3:*",
-        Resource: [
-          aws_s3_bucket.logs.arn,
-          "${aws_s3_bucket.logs.arn}/*"
-        ],
-        Condition: { Bool: { "aws:SecureTransport": "false" } }
+        Sid      = "DenyInsecureTransport"
+        Effect   = "Deny"
+        Principal = "*"
+        Action   = "s3:*"
+        Resource = [
+          aws_s3_bucket.this.arn,
+          "${aws_s3_bucket.this.arn}/*"
+        ]
+        Condition = {
+          Bool = { "aws:SecureTransport" = "false" }
+        }
       },
+
+      // Deny setting public canned ACLs on objects.
       {
-        Sid: "DenyPublicAcls",
-        Effect: "Deny",
-        Principal: "*",
-        Action: [ "s3:PutObject", "s3:PutObjectAcl" ],
-        Resource: "${aws_s3_bucket.logs.arn}/*",
-        Condition: {
-          StringEquals: {
-            "s3:x-amz-acl": [ "public-read", "public-read-write", "authenticated-read" ]
+        Sid      = "DenyPublicCannedACLsOnObjects"
+        Effect   = "Deny"
+        Principal = "*"
+        Action   = [
+          "s3:PutObject",
+          "s3:PutObjectAcl"
+        ]
+        Resource = "${aws_s3_bucket.this.arn}/*"
+        Condition = {
+          StringEquals = {
+            "s3:x-amz-acl" = [
+              "public-read",
+              "public-read-write",
+              "authenticated-read"
+            ]
+          }
+        }
+      },
+
+      // Deny setting public canned ACLs on the bucket itself.
+      {
+        Sid      = "DenyPublicCannedACLsOnBucket"
+        Effect   = "Deny"
+        Principal = "*"
+        Action   = "s3:PutBucketAcl"
+        Resource = aws_s3_bucket.this.arn
+        Condition = {
+          StringEquals = {
+            "s3:x-amz-acl" = [
+              "public-read",
+              "public-read-write",
+              "authenticated-read"
+            ]
           }
         }
       }
     ]
   })
 }
-

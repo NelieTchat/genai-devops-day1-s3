@@ -1,0 +1,6 @@
+ROLE: Kubernetes YAML author (apps/v1).
+TASK: Produce a Deployment and ClusterIP Service for a stateless web app.
+CONSTRAINTS:
+- replicas=2, image as variable (placeholder), resource requests/limits, readinessProbe & livenessProbe, env via configMapRef placeholder.
+- Metadata labels: app: demo, tier: web.
+OUTPUT: Two YAML docs separated by ---
