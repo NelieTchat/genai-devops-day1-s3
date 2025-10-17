@@ -28,3 +28,21 @@ variable "force_destroy" {
   description = "Set to true to allow terraform to delete the bucket with objects/versions."
   default     = false
 }
+
+variable "enable_access_logging" {
+  type        = bool
+  description = "Enable S3 server access logging to a target bucket/prefix."
+  default     = false
+}
+
+variable "log_bucket" {
+  type        = string
+  description = "Target bucket for server access logs (must exist)."
+  default     = ""
+}
+
+variable "log_prefix" {
+  type        = string
+  description = "Prefix for access logs in the target bucket."
+  default     = "s3-logs/"
+}

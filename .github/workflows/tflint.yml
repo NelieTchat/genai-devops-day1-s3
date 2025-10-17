@@ -17,3 +17,6 @@ jobs:
         run: tflint --init
       - name: Run tflint
         run: tflint -f compact
+
+permissions:
+  contents: read

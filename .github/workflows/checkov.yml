@@ -15,3 +15,6 @@ jobs:
           directory: ./
           quiet: true
           soft_fail: false
+permissions:
+  contents: read
+

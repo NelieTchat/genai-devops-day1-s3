@@ -149,3 +149,28 @@ resource "aws_s3_bucket_policy" "this" {
     ]
   })
 }
+
+resource "aws_s3_bucket_lifecycle_configuration" "this" {
+  bucket     = aws_s3_bucket.this.id
+  depends_on = [aws_s3_bucket_versioning.this]
+
+  rule {
+    id     = "noncurrent-ia-30d-expire-180d"
+    status = "Enabled"
+    filter {}
+
+    # NEW: abort failed/incomplete uploads after 7 days
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+
+    noncurrent_version_transition {
+      noncurrent_days = 30
+      storage_class   = "STANDARD_IA"
+    }
+
+    noncurrent_version_expiration {
+      noncurrent_days = 180
+    }
+  }
+}
