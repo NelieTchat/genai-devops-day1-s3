@@ -13,13 +13,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # Replace the previous docker:// step with this:
       - name: Validate Kubernetes manifests with kubeconform
-        uses: docker://ghcr.io/yannh/kubeconform:latest
-        with: {}
-        env:
-          KUBECONFORM_OPTS: --summary --strict
-        # Validate both generated files and templates
-        # (template validation ensures you won't ship broken YAML)
-        # kubeconform expects files via args
-        # docker action runs entrypoint 'kubeconform'
-      - run: kubeconform --summary --strict *.yaml templates/k8s_webapp/*.yaml
+        run: |
+          set -euo pipefail
+          docker run --rm -v "$PWD":/work -w /work ghcr.io/yannh/kubeconform:latest \
+            kubeconform --summary --strict \
+              *.yaml \
+              templates/k8s_webapp/*.yaml
