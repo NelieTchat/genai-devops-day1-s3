@@ -30,3 +30,5 @@ terraform validate
 [![GenAI Codegen](https://github.com/NelieTchat/genai-devops-day1-s3/actions/workflows/genai-codegen.yml/badge.svg)](https://github.com/NelieTchat/genai-devops-day1-s3/actions/workflows/genai-codegen.yml)
 
 [![GenAI Codegen](https://github.com/NelieTchat/genai-devops-day1-s3/actions/workflows/genai-codegen.yml/badge.svg)](https://github.com/NelieTchat/genai-devops-day1-s3/actions/workflows/genai-codegen.yml)
+
+[![k8s-validate](https://github.com/NelieTchat/genai-devops-day1-s3/actions/workflows/k8s-validate.yml/badge.svg)](https://github.com/NelieTchat/genai-devops-day1-s3/actions/workflows/k8s-validate.yml)
