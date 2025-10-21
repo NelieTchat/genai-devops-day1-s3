@@ -1,0 +1,25 @@
+name: k8s-validate
+permissions:
+  contents: read
+
+on:
+  push:
+    paths: ["*.yaml", "templates/k8s_webapp/*.yaml"]
+  pull_request:
+    paths: ["*.yaml", "templates/k8s_webapp/*.yaml"]
+
+jobs:
+  kubeconform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Kubernetes manifests with kubeconform
+        uses: docker://ghcr.io/yannh/kubeconform:latest
+        with: {}
+        env:
+          KUBECONFORM_OPTS: --summary --strict
+        # Validate both generated files and templates
+        # (template validation ensures you won't ship broken YAML)
+        # kubeconform expects files via args
+        # docker action runs entrypoint 'kubeconform'
+      - run: kubeconform --summary --strict *.yaml templates/k8s_webapp/*.yaml
