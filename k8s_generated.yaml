@@ -1,0 +1,68 @@
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-web
+  labels:
+    app: demo
+    tier: web
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: demo
+      tier: web
+  template:
+    metadata:
+      labels:
+        app: demo
+        tier: web
+    spec:
+      containers:
+      - name: demo-container
+        image: ghcr.io/OWNER/IMAGE:TAG
+        envFrom:
+          - configMapRef:
+              name: demo-config
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+        securityContext:
+          runAsNonRoot: true
+          readOnlyRootFilesystem: true
+          privileged: false
+          capabilities:
+            add: []
+            drop: ['ALL']
+      imagePullSecrets:
+      - name: your-secret-name
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-web
+  labels:
+    app: demo
+    tier: web
+spec:
+  selector:
+    app: demo
+    tier: web
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+```
