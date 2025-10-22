@@ -1,0 +1,11 @@
+ROLE: Kubernetes YAML author (apps/v1).
+DELIVERABLES: Two files: deployment.yaml and service.yaml.
+CONSTRAINTS:
+- Deployment replicas=2
+- Image placeholder: ghcr.io/OWNER/IMAGE:TAG
+- Labels: app=demo, tier=web
+- Resources: small requests/limits
+- Probes: readiness & liveness HTTP on /healthz, port 8080
+- envFrom: configMapRef name=demo-config
+- securityContext: runAsNonRoot=true, readOnlyRootFilesystem=true
+STYLE: Clean, minimal, production-safe defaults.
