@@ -1,0 +1,21 @@
+ROLE: Terraform author (Terraform >=1.5, AWS provider >=5.0). Output ONLY three sections, no commentary.
+
+REQUIREMENTS:
+- Private S3 bucket
+- Versioning enabled
+- Default SSE-KMS using input kms_key_id
+- Lifecycle: noncurrent -> STANDARD_IA at 30d; expire noncurrent at 180d
+- Public access block
+- Bucket policy: deny non-TLS; deny public canned ACLs
+- Expose force_destroy, tags, region, bucket_name (explicit, no composed names)
+
+OUTPUT FORMAT (exactly; no extra text):
+<<<variables.tf
+...HCL...
+>>>
+<<<main.tf
+...HCL...
+>>>
+<<<outputs.tf
+...HCL...
+>>>
