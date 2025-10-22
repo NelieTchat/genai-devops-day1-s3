@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import argparse, pathlib, sys
+import argparse, pathlib, sys, subprocess, textwrap
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
@@ -20,40 +20,62 @@ def write_text(p: pathlib.Path, s: str) -> None:
 
 def render_from_templates(stack: str) -> dict:
     tdir = ROOT / "templates" / stack
-    if not tdir.exists():
-        raise SystemExit(f"Template folder not found: {tdir}")
-    files = STACK_FILES.get(stack)
-    if not files:
-        raise SystemExit(f"Unknown stack: {stack}")
-
+    files = STACK_FILES[stack]
     out = {}
     for fname in files:
         src = tdir / fname
-        if not src.exists():
-            raise SystemExit(f"Missing template for {stack}: {src}")
         body = read_text(src)
         header = STABLE_HEADER_TF if fname.endswith(".tf") else STABLE_HEADER_YAML
         out[fname] = header + body
     return out
 
+def ollama_generate_k8s(prompt_path: pathlib.Path, model: str) -> dict:
+    prompt = read_text(prompt_path)
+    sys.stdout.write(f"[OLLAMA] model={model}\n")
+    proc = subprocess.run(
+        ["ollama", "run", model],
+        input=prompt.encode("utf-8"),
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
+    if proc.returncode != 0:
+        sys.stderr.write(proc.stderr.decode("utf-8"))
+        sys.exit(proc.returncode)
+    text = proc.stdout.decode("utf-8").strip()
+
+    # Expect exactly two YAML docs separated by '---'
+    parts = [p.strip() for p in text.split("\n---\n") if p.strip()]
+    if len(parts) != 2:
+        sys.stderr.write("Expected exactly two YAML documents from model.\n")
+        sys.exit(2)
+
+    return {
+        "deployment.yaml": STABLE_HEADER_YAML + parts[0] + "\n",
+        "service.yaml":    STABLE_HEADER_YAML + parts[1] + "\n",
+    }
+
 def main():
     ap = argparse.ArgumentParser(description="Cost-safe prompt → files generator")
-    ap.add_argument("--prompt", required=True, help="Path to prompt file (for provenance only)")
+    ap.add_argument("--prompt", required=True, help="Path to prompt file (for provenance or model input)")
     ap.add_argument("--out", default=".", help="Output directory")
     ap.add_argument("--stack", default="terraform_s3", choices=list(STACK_FILES.keys()))
+    ap.add_argument("--engine", default="template", choices=["template","ollama"], help="template=static templates; ollama=local model")
+    ap.add_argument("--model", default="mistral", help="Local model name when --engine=ollama")
     ap.add_argument("--check", action="store_true", help="Exit non-zero if generated content differs")
     a = ap.parse_args()
 
     prompt_path = pathlib.Path(a.prompt)
     if not prompt_path.exists():
-        print(f"Prompt not found: {prompt_path}", file=sys.stderr)
-        sys.exit(2)
+        print(f"Prompt not found: {prompt_path}", file=sys.stderr); sys.exit(2)
 
-    outputs = render_from_templates(a.stack)
+    if a.engine == "template":
+        outputs = render_from_templates(a.stack)
+    else:
+        if a.stack != "k8s_webapp":
+            print("ollama engine is currently supported for k8s_webapp only.", file=sys.stderr)
+            sys.exit(2)
+        outputs = ollama_generate_k8s(prompt_path, a.model)
 
-    out_dir = pathlib.Path(a.out)
-    out_dir.mkdir(parents=True, exist_ok=True)
-
+    out_dir = pathlib.Path(a.out); out_dir.mkdir(parents=True, exist_ok=True)
     changed = False
     for fname, content in outputs.items():
         dest = out_dir / fname
@@ -63,11 +85,9 @@ def main():
             if a.check:
                 print(f"[DIFF] {dest} would change", file=sys.stderr)
             else:
-                write_text(dest, content)
-                print(f"[WRITE] {dest}")
+                write_text(dest, content); print(f"[WRITE] {dest}")
 
-    if a.check and changed:
-        sys.exit(3)
+    if a.check and changed: sys.exit(3)
 
 if __name__ == "__main__":
     main()
